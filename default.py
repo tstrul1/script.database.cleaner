@@ -28,42 +28,41 @@
 #  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
 #  MA 02110-1301, USA.
 #
-
-
 import datetime
-
+ 
 import json as jsoninterface
-
+ 
 import sqlite3
-
+ 
 import xml.etree.ElementTree as ET
-
+ 
 import mysql.connector
-
+ 
 import xbmc
-
+ 
 import xbmcaddon
-
+ 
 import xbmcgui
-
+ 
 import xbmcvfs
-
+ 
+ 
 # database versions to scan for
 MIN_VIDEODB_VERSION = 35
-MAX_VIDEODB_VERSION = 116  # i.e. Leia, aka Kodi 18
-
-
+MAX_VIDEODB_VERSION = 119  # i.e. Leia, aka Kodi 18
+ 
+ 
 ACTION_PREVIOUS_MENU = 10
 ACTION_SELECT_ITEM = 7
 ACTION_NAV_BACK = 92
 ACTION_MOUSE_LEFT_CLICK = 100
 flag = 0
 WINDOW = xbmcgui.Window(10000)
-
-
+ 
+ 
 class MyClass(xbmcgui.WindowXMLDialog):
     def __init__( self, *args, **kwargs  ): pass
-
+ 
     def onInit( self ):
         self.container = self.getControl(6)
         self.container2 = self.getControl(8)
@@ -71,7 +70,7 @@ class MyClass(xbmcgui.WindowXMLDialog):
         self.listitems = []
         self.excludesitems = []
         self.addonsettings = []
-
+ 
     #       List paths from sources.xml
         if not specificpath and not replacepath:
             self.display_list = display_list
@@ -94,16 +93,16 @@ class MyClass(xbmcgui.WindowXMLDialog):
         self.container.addItems(self.listitems)
     #       List paths in excludes.xml (if it exists)
         self.excludes_list = excludes_list
-
+ 
         if excluding:
             for i in range(len(self.excludes_list)):
                 self.excludesitems.append('[COLOR yellow]' + self.excludes_list[i]+ '[/COLOR]')
         else:
             self.excludesitems.append("Not Present")
         self.container2.addItems(self.excludesitems)
-
+ 
     #       List the relevant addon settings
-
+ 
         if is_pvr and (not specificpath and not replacepath):
             self.addonsettings.append('Keep PVR information')
         if bookmarks and (not specificpath and not replacepath):
@@ -137,7 +136,7 @@ class MyClass(xbmcgui.WindowXMLDialog):
             self.addonsettings.append('[COLOR red][B]There are %d paths to be changed[/B][/COLOR]' % data_list_size)
         else:
             self.addonsettings.append('[COLOR red][B]There are %d entries to be removed[/B][/COLOR]' % data_list_size)
-
+ 
         self.container3.addItems(self.addonsettings)
         #   Show warning about backup if using MySQL
         if is_mysql:
@@ -147,7 +146,7 @@ class MyClass(xbmcgui.WindowXMLDialog):
         if replacepath:
             self.getControl(20).setLabel('WARNING - Renaming specific path from [COLOR yellow]%s[/COLOR] ' % old_path)
             self.getControl(21).setLabel('TO  [COLOR yellow]%s[/COLOR] ' % new_path)
-
+ 
     def onAction(self, action):
         global flag
         dbglog('Got an action %s' % action.getId())
@@ -157,7 +156,7 @@ class MyClass(xbmcgui.WindowXMLDialog):
             try:
                 btn = self.getFocus()
                 btn_id = btn.getId()
-
+ 
             except:
                 btn_id = None
             if btn_id == 1:
@@ -168,20 +167,20 @@ class MyClass(xbmcgui.WindowXMLDialog):
                 dbglog('you pressed clean')
                 flag = 1
                 self.close()
-
+ 
 #  Set some variables ###
-
+ 
 addon = xbmcaddon.Addon()
 addonname = addon.getAddonInfo('name')
 addonversion = addon.getAddonInfo('version')
-addonpath = addon.getAddonInfo('path').decode('utf-8')
-
-advanced_file = xbmc.translatePath('special://profile/advancedsettings.xml').decode('utf-8')
-sources_file = xbmc.translatePath('special://profile/sources.xml').decode('utf-8')
-excludes_file = xbmc.translatePath('special://profile/addon_data/script.database.cleaner/excludes.xml').decode('utf-8')
-db_path = xbmc.translatePath('special://database').decode('utf-8')
-userdata_path = xbmc.translatePath('special://userdata').decode('utf-8')
-bp_logfile_path = xbmc.translatePath('special://temp/bp-debuglog.log').decode('utf-8')
+addonpath = addon.getAddonInfo('path')
+ 
+advanced_file = xbmc.translatePath('special://profile/advancedsettings.xml')
+sources_file = xbmc.translatePath('special://profile/sources.xml')
+excludes_file = xbmc.translatePath('special://profile/addon_data/script.database.cleaner/excludes.xml')
+db_path = xbmc.translatePath('special://database')
+userdata_path = xbmc.translatePath('special://userdata')
+bp_logfile_path = xbmc.translatePath('special://temp/bp-debuglog.log')
 type_of_log =''
 is_pvr = addon.getSetting('pvr')
 autoclean = addon.getSetting('autoclean')
@@ -233,26 +232,26 @@ if debugging == 'true':
     debugging = True
 else:
     debugging = False
-
-
+ 
+ 
 def log(txt):
-
+ 
     if isinstance(txt, str):
-        txt = txt.decode('utf-8')
+        txt = txt
         message = u'%s: %s' % (addonname, txt)
         xbmc.log(msg=message.encode('utf-8'), level=xbmc.LOGDEBUG)
-
+ 
 def dbglog(txt):
     if debugging:
         log(txt)
-
+ 
 def exit_on_error():
     WINDOW.setProperty('database-cleaner-running', 'false')
     exit(1)
-
+ 
 def cleaner_log_file(our_select, cleaning):
-    cleaner_log = xbmc.translatePath('special://temp/database-cleaner.log').decode('utf-8')
-    old_cleaner_log = xbmc.translatePath('special://temp/database-cleaner.old.log').decode('utf-8')
+    cleaner_log = xbmc.translatePath('special://temp/database-cleaner.log')
+    old_cleaner_log = xbmc.translatePath('special://temp/database-cleaner.old.log')
     old_log_contents =''
     do_progress = False
     if not enable_logging:
@@ -277,7 +276,7 @@ def cleaner_log_file(our_select, cleaning):
         old_log= xbmcvfs.File(cleaner_log)
         old_log_contents=old_log.read()
         old_log.close()
-
+ 
     now = datetime.datetime.now()
     logfile=xbmcvfs.File(cleaner_log, 'w')
     if old_log_contents:
@@ -299,7 +298,7 @@ def cleaner_log_file(our_select, cleaning):
         dbglog('Creating progress dialog for logfile')
         dialog.create('Getting required data.  Please wait')
         dialog.update(1)
-
+ 
     if not cleaning and not replacepath:
         logfile.write('The following file paths would be removed from your database')
         logfile.write('\n\n')
@@ -350,23 +349,23 @@ def cleaner_log_file(our_select, cleaning):
         dialog.close()
     logfile.write('\n\n')
     logfile.close()
-
+ 
 ####    Start Here !!   ####
-
+ 
 dbglog('script version %s started' % addonversion)
 #if WINDOW.getProperty('database-cleaner-running') == 'true':
     #log('Video Database Cleaner already running')
     #exit(0)
 #else:
     #WINDOW.setProperty('database-cleaner-running', 'true')
-
+ 
 xbmcgui.Dialog().notification(addonname, 'Starting Up', xbmcgui.NOTIFICATION_INFO, 2000)
 xbmc.sleep(2000)
-
+ 
 if xbmcvfs.exists(advanced_file):
     dbglog('Found advancedsettings.xml')
     found = True
-
+ 
 if found:
     msg = advanced_file.encode('utf-8')
     dbglog('looking in advancedsettings for videodatabase info')
@@ -405,29 +404,29 @@ if found:
         e =str(e)
         dbglog ('Error parsing advancedsettings file - %s' % e)
         is_mysql = False
-
+ 
 if not is_mysql:
     our_dbname = 'MyVideos'
-
+ 
     for num in range(MAX_VIDEODB_VERSION, MIN_VIDEODB_VERSION, -1):
         testname = our_dbname + str(num)
         our_test = db_path + testname + '.db'
-
+ 
         dbglog('Checking for local database %s' % testname)
         if xbmcvfs.exists(our_test):
             break
     if num != MIN_VIDEODB_VERSION:
         our_dbname = testname
-
+ 
     if our_dbname == 'MyVideos':
         dbglog('No video database found - assuming MySQL database')
     dbglog('Database name is %s' % our_dbname)
-
+ 
 if is_pvr == 'true':
     is_pvr = True
 else:
     is_pvr = False
-
+ 
 if autoclean == 'true':
     autoclean = True
 else:
@@ -444,7 +443,7 @@ if no_sources == 'true':
     no_sources = False
 else:
     no_sources = True
-
+ 
 dbglog('Settings for file cleaning are as follows')
 if is_pvr:
     dbglog('keeping PVR files')
@@ -456,7 +455,7 @@ if promptdelete:
     dbglog('Prompting before deletion')
 if no_sources:
     dbglog('Not using sources.xml')
-
+ 
 if source_file_path != '':
     sources_file = source_file_path
     remote_file = True
@@ -492,9 +491,9 @@ my_command = ''
 first_time = True
 if forcedbname:
     log('Forcing video db version to %s' % forcedname)
-
+ 
 # Open database connection
-
+ 
 if is_mysql and not forcedbname:
     if our_dbname == '': # no db name in advancedsettings
         our_dbname = 'MyVideos'
@@ -540,7 +539,7 @@ elif not is_mysql and not forcedbname:
     try:
         my_db_connector = db_path + our_dbname + '.db'
         db = sqlite3.connect(my_db_connector)
-    except Exception,e:
+    except Exception as e:
         s = str(e)
         xbmcgui.Dialog().ok(addonname, 'Error connecting to SQLite database', s)
         log('Error connecting to SQLite database - %s' % s)
@@ -559,9 +558,9 @@ else:
         xbmcgui.Dialog().ok(addonname,'Error - Unable to connect to forced database %s. Script will now exit' % forcedname)
         log('Unable to connect to forced database s%' % forcedname)
         exit_on_error()
-
+ 
 cursor = db.cursor()
-
+ 
 if xbmcvfs.exists(excludes_file):
     excludes_list =[]
     excluding = True
@@ -579,14 +578,14 @@ if xbmcvfs.exists(excludes_file):
         log('Error parsing excludes.xml')
         xbmcgui.Dialog().ok(addonname, 'Error parsing excludes.xml file - script aborted')
         exit_on_error()
-
+ 
 if not no_sources:
     # start reading sources.xml and build SQL statements to exclude these sources from any cleaning
     try:
         display_list =[]
         for video in root.findall('video'):
             dbglog('Contents of sources.xml file')
-
+ 
             for sources in video.findall('source'):
                 for path_name in sources.findall('name'):
                     the_path_name = path_name.text
@@ -611,7 +610,7 @@ if not no_sources:
         log('Error parsing sources.xml file')
         xbmcgui.Dialog().ok(addonname, 'Error parsing sources.xml file - script aborted')
         exit_on_error()
-
+ 
     if is_pvr:
         my_command = my_command + " AND strPath NOT LIKE 'pvr://%'"
         our_source_list = our_source_list + 'Keeping PVR info '
@@ -621,9 +620,9 @@ if not no_sources:
     if bookmarks:
         my_command = my_command + ' AND idFile NOT IN (SELECT idFile FROM bookmark)'
         our_source_list = our_source_list + 'Keeping bookmarked files '
-
+ 
         # construct the full SQL query
-
+ 
     sql = \
         """DELETE FROM files WHERE idPath IN(SELECT idPath FROM path where (""" + my_command + """));"""
 if no_sources:
@@ -645,9 +644,9 @@ if no_sources:
         else:
             my_command = my_command + exclude_command.replace('AND','',1)
         our_source_list = our_source_list + 'Keeping items from excludes.xml '
-
+ 
 # Build SQL query
-
+ 
 if not no_sources: # this is SQL for no sources
     sql = """DELETE FROM files WHERE idPath IN ( SELECT idPath FROM path WHERE ((""" + my_command + """)));"""
 #   sql2="""DELETE FROM path WHERE idPath IN (SELECT * FROM( SELECT idPath FROM path WHERE ((strPath LIKE 'rtmp://%' OR strPath Like 'rtmpe:%' OR strPath LIKE 'plugin:%' OR strPath LIKE 'http://%') AND (""" + my_command +"""))) as pathsub);"""
@@ -682,7 +681,7 @@ else: # must be replacing a path at this point
         dbglog('Error - Missing path for replacement')
         exit_on_error()
 xbmc.sleep(500)
-
+ 
 if promptdelete:
     cleaner_log_file(our_select, False)
     mydisplay = MyClass('cleaner-window.xml', addonpath, 'Default', '1080i')
@@ -692,14 +691,14 @@ if promptdelete:
         i = True
     else:
         i = False
-
+ 
 else:
     i = True
 if i:
     if autobackup == 'true' and not is_mysql:
         backup_path = xbmc.translatePath('special://database/backups/'
-            ).decode('utf-8')
-
+            )
+ 
         if not xbmcvfs.exists(backup_path):
             dbglog('Creating backup path %s' % backup_path)
             xbmcvfs.mkdir(backup_path)
@@ -723,26 +722,26 @@ if i:
     cleaner_log_file(our_select, True)
     if not replacepath:
         try:
-
+ 
         # Execute the SQL command
             dbglog('Executing SQL command - %s' % sql)
             cursor.execute(sql)
 #           cursor.execute(sql2)
         # Commit the changes in the database
-
+ 
             db.commit()
-
+ 
         except Exception as e:
-
+ 
         # Rollback in case there is any error
-
+ 
             db.rollback()
             dbglog('Error in db commit. Transaction rolled back')
             dbglog('******************************************************************************')
             dbglog('**  SQL ERROR  **  SQL ERROR   **  SQL ERROR  **  SQL ERROR  **  SQL ERROR  **')
             dbglog('**   %s ' % e)
             dbglog('******************************************************************************')
-
+ 
     else:
         dbglog('Changing Paths - generating SQL statements')
         our_select = "SELECT strPath from path WHERE strPath Like '" + old_path + "%'"
@@ -758,7 +757,7 @@ if i:
         renamepath_list = []
         for strPath in cursor:  # build a list of paths to change
             renamepath_list.append( ''.join(strPath))
-
+ 
         for i in range(len(renamepath_list)):
             tempcount += 1
             our_old_path = renamepath_list[i]
@@ -774,7 +773,7 @@ if i:
                 e = str(e)
                 db.rollback()
                 dbglog('Error in db commit %s. Transaction rolled back' % e)
-
+ 
     # disconnect from server
 #       xbmc.executebuiltin( "Dialog.Close(busydialog)" )
         xbmc.sleep(1000)
@@ -783,31 +782,31 @@ if i:
     db.close()
     dbglog("Database connection closed")
     # Make sure replacing or changing a path is a one-shot deal
-
+ 
     if replacepath or specificpath:
         addon.setSetting('specificpath', 'false')
         addon.setSetting('replacepath', 'false')
-
-
+ 
+ 
     if autoclean:
         xbmcgui.Dialog().notification(addonname,
                             'Running cleanup', xbmcgui.NOTIFICATION_INFO,
                             2000)
         xbmc.sleep(2000)
-
+ 
         json_query = \
             xbmc.executeJSONRPC('{ "jsonrpc": "2.0", "method": "VideoLibrary.Clean","id": 1 }'
                                 )
-        json_query = unicode(json_query, 'utf-8', errors='ignore')
+        #json_query = str(json_query)
         json_query = jsoninterface.loads(json_query)
-        if json_query.has_key('result'):
+        if 'result' in json_query:
             dbglog('Clean library sucessfully called')
     else:
         xbmcgui.Dialog().ok(addonname,
                             'Script finished.  You should run clean library for best results'
                             )
     dbglog('Script finished')
-
+ 
 else:
     xbmcgui.Dialog().notification(addonname, 'Script aborted - No changes made', xbmcgui.NOTIFICATION_INFO, 3000)
     dbglog('script aborted by user - no changes made')
