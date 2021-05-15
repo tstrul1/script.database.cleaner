@@ -39,6 +39,8 @@ import xml.etree.ElementTree as ET
 import mysql.connector
  
 import xbmc
+
+import xbmcvfs
  
 import xbmcaddon
  
@@ -175,12 +177,12 @@ addonname = addon.getAddonInfo('name')
 addonversion = addon.getAddonInfo('version')
 addonpath = addon.getAddonInfo('path')
  
-advanced_file = xbmc.translatePath('special://profile/advancedsettings.xml')
-sources_file = xbmc.translatePath('special://profile/sources.xml')
-excludes_file = xbmc.translatePath('special://profile/addon_data/script.database.cleaner/excludes.xml')
-db_path = xbmc.translatePath('special://database')
-userdata_path = xbmc.translatePath('special://userdata')
-bp_logfile_path = xbmc.translatePath('special://temp/bp-debuglog.log')
+advanced_file = xbmcvfs.translatePath('special://profile/advancedsettings.xml')
+sources_file = xbmcvfs.translatePath('special://profile/sources.xml')
+excludes_file = xbmcvfs.translatePath('special://profile/addon_data/script.database.cleaner/excludes.xml')
+db_path = xbmcvfs.translatePath('special://database')
+userdata_path = xbmcvfs.translatePath('special://userdata')
+bp_logfile_path = xbmcvfs.translatePath('special://temp/bp-debuglog.log')
 type_of_log =''
 is_pvr = addon.getSetting('pvr')
 autoclean = addon.getSetting('autoclean')
@@ -250,8 +252,8 @@ def exit_on_error():
     exit(1)
  
 def cleaner_log_file(our_select, cleaning):
-    cleaner_log = xbmc.translatePath('special://temp/database-cleaner.log')
-    old_cleaner_log = xbmc.translatePath('special://temp/database-cleaner.old.log')
+    cleaner_log = xbmcvfs.translatePath('special://temp/database-cleaner.log')
+    old_cleaner_log = xbmcvfs.translatePath('special://temp/database-cleaner.old.log')
     old_log_contents =''
     do_progress = False
     if not enable_logging:
@@ -696,7 +698,7 @@ else:
     i = True
 if i:
     if autobackup == 'true' and not is_mysql:
-        backup_path = xbmc.translatePath('special://database/backups/'
+        backup_path = xbmcvfs.translatePath('special://database/backups/'
             )
  
         if not xbmcvfs.exists(backup_path):
