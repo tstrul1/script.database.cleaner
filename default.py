@@ -29,39 +29,26 @@
 #  MA 02110-1301, USA.
 #
 import datetime
- 
 import json as jsoninterface
- 
 import sqlite3
- 
 import xml.etree.ElementTree as ET
- 
 import mysql.connector
- 
-import xbmc
-
+import xbm
 import xbmcvfs
- 
 import xbmcaddon
- 
 import xbmcgui
- 
-import xbmcvfs
- 
- 
+
 # database versions to scan for
 MIN_VIDEODB_VERSION = 116
 MAX_VIDEODB_VERSION = 119  # i.e. Matrix, aka Kodi 19
- 
- 
+
 ACTION_PREVIOUS_MENU = 10
 ACTION_SELECT_ITEM = 7
 ACTION_NAV_BACK = 92
 ACTION_MOUSE_LEFT_CLICK = 100
 flag = 0
 WINDOW = xbmcgui.Window(10000)
- 
- 
+
 class MyClass(xbmcgui.WindowXMLDialog):
     def __init__( self, *args, **kwargs  ): pass
  
