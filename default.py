@@ -50,7 +50,7 @@ import xbmcvfs
  
  
 # database versions to scan for
-MIN_VIDEODB_VERSION = 119
+MIN_VIDEODB_VERSION = 116
 MAX_VIDEODB_VERSION = 119  # i.e. Matrix, aka Kodi 19
  
  
