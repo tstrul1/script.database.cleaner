@@ -3,7 +3,7 @@
 
 #  script.video.cleaner
 #  Written by black_eagle and BatterPudding
-#
+#  Updated to work with Kodi 19 Matrix by kenmills
 # Version 27b/7 - Batter Pudding Fix added
 # Version 27b/9 - Batter Pudding tweaks the debug logging
 # Version 28b/1 - New GUI, several code fixes
@@ -50,8 +50,8 @@ import xbmcvfs
  
  
 # database versions to scan for
-MIN_VIDEODB_VERSION = 35
-MAX_VIDEODB_VERSION = 119  # i.e. Leia, aka Kodi 18
+MIN_VIDEODB_VERSION = 119
+MAX_VIDEODB_VERSION = 119  # i.e. Matrix, aka Kodi 19
  
  
 ACTION_PREVIOUS_MENU = 10
