@@ -33,7 +33,7 @@ import json as jsoninterface
 import sqlite3
 import xml.etree.ElementTree as ET
 import mysql.connector
-import xbm
+import xbmc
 import xbmcvfs
 import xbmcaddon
 import xbmcgui
