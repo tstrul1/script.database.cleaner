@@ -15,4 +15,9 @@
     <disclaimer lang="en_GB">Whilst every effort has been taken to ensure it doesn't, this script could break your database. Always make sure you back it up !!</disclaimer>
     <forum>http://forum.kodi.tv/showthread.php?tid=272112</forum>
   </extension>
+<assets>
+     <icon>icon.png</icon>
+     <fanart>fanart.png</fanart>
+     <screenshot></screenshot>
+</assets>
 </addon>
