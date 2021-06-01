@@ -51,11 +51,39 @@ doing so.
 
 When the script cleaning/renaming has finished, the script calls Kodi's built in 'clean
 library' routine to clean the other tables in the database.  This can also
-be turned off in the settings but this is not recommended.
+be turned off in the settings but this is not recommended.  
+*Kodi will sometimes require multiple passes to clean all the paths that it can potentially clean 
+(I think this is because of "cascading" effects of removing invalid files, invalid paths and invalid 
+parent paths). The option to "Run the builtin 2-6 times" option to have the built-in run repeatedly.
+
+An option was added to the settings dialog in order to allow movie sets with fewer than two movies to be 
+removed from the `sets` table. The default behaviour of the add-on (with the aforementioned option turned off)
+was modified so as to exclude sets with fewer than one movie (the provided add-on did not perform any sort 
+of exclusions on the sets table).
 
 If Kodi's debugging is enabled, the script will write a few things in there.
 If the script's debugging is also enabled in the settings, it will be quite
 verbose as to what it is doing.
+
+Inclusion of texturecache.py (by Milhouse):
+Additional settings in the Video Database Cleaner addon to allow user to run texturecache.py 
+after the Video Database Cleaner has completed cleaning the MyMovies.db.
+
+Additional settings allow the user to:
+a. Enable or Disable the running of texturecache.py at the end of the Video Database cleanup
+b. Configure any of the settings available in the texturecache.cfg file
+. If texturecache.py is Enabled, run it, multiple times, each time with one of the following flags:
+c, C, lc, p, P, Xd, r, R, qa, qax , duplicates
+
+Deep Clean option:
+WARNING - CAN BE VEY SLOW! (it will probe every pysical file/directory as well as all that are listed in the database)
+This option manually scans the locations, listed in sources.xml, and builds a list of current, legitimate directories and files. 
+It doesn't know or care if directories are removable
+media/network storage/mount points and ignores the 'keep bookmarks' function and doesn't work on the 'remove specific path'
+operations (only on the general cleaning operations).
+Once it has the list of exisiting, legitimate media files, it will compare this to the database and remove any enries that do not correspond.
+*This is helpful whne there have been a lot of manually deleted files/folders that the built in Kodi Video cleaner dos not clean up.  
+It will help to remove many of the "directory does not exist" erros in the kodi.log file
 
 DISCLAIMER
 ==========
