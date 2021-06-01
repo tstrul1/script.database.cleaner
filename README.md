@@ -53,7 +53,7 @@ When the script cleaning/renaming has finished, the script calls Kodi's built in
 library' routine to clean the other tables in the database.  This can also
 be turned off in the settings but this is not recommended.  
 *Kodi will sometimes require multiple passes to clean all the paths that it can potentially clean 
-(I think this is because of "cascading" effects of removing invalid files, invalid paths and invalid 
+(This is because of "cascading" effects of removing invalid files, invalid paths and invalid 
 parent paths). The option to "Run the builtin 2-6 times" option to have the built-in run repeatedly.
 
 An option was added to the settings dialog in order to allow movie sets with fewer than two movies to be 
