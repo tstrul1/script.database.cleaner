@@ -76,13 +76,13 @@ b. Configure any of the settings available in the texturecache.cfg file
 c, C, lc, p, P, Xd, r, R, qa, qax , duplicates
 
 Deep Clean option:
-WARNING - CAN BE VEY SLOW! (it will probe every pysical file/directory as well as all that are listed in the database)
+WARNING - CAN BE VERY SLOW! (it will probe every physical file/directory as well as all that are listed in the database)
 This option manually scans the locations, listed in sources.xml, and builds a list of current, legitimate directories and files. 
 It doesn't know or care if directories are removable
 media/network storage/mount points and ignores the 'keep bookmarks' function and doesn't work on the 'remove specific path'
 operations (only on the general cleaning operations).
 Once it has the list of exisiting, legitimate media files, it will compare this to the database and remove any enries that do not correspond.
-*This is helpful whne there have been a lot of manually deleted files/folders that the built in Kodi Video cleaner dos not clean up.  
+*This is helpful whne there have been a lot of manually deleted files/folders that the built in Kodi Video cleaner does not clean up.  
 It will help to remove many of the "directory does not exist" erros in the kodi.log file
 
 DISCLAIMER
