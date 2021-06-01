@@ -111,12 +111,16 @@ class MyClass(xbmcgui.WindowXMLDialog):
 
     #       List the relevant addon settings
 
+        if deepclean and not replacepath and not specificpath and not is_mysql and not no_sources and not remote_file:
+            self.addonsettings.append('Deep clean is on')
         if is_pvr and not specificpath and not replacepath:
             self.addonsettings.append('Keep PVR information')
         if bookmarks and not specificpath and not replacepath:
             self.addonsettings.append('Keep bookmark information')
         if autoclean:
             self.addonsettings.append('Auto call Clean Library')
+        if autoclean_multiple_times:
+            self.addonsettings.append('Run Clean Library multiple times')
         if promptdelete:
             self.addonsettings.append('Show summary window (This window !!)'
                     )
@@ -145,15 +149,51 @@ class MyClass(xbmcgui.WindowXMLDialog):
 
         self.addonsettings.append('Database is - [COLOR green][B]%s[/B][/COLOR]'
                                    % our_dbname)
-        cursor.execute(our_select)
+        wrapped_execute(cursor, our_select, my_command_list, window=self, suppress_notification=True)
         data_list = cursor.fetchall()
         data_list_size = len(data_list)
         if replacepath:
             self.addonsettings.append('[COLOR red][B]There are %d paths to be changed[/B][/COLOR]'
                      % data_list_size)
         else:
-            self.addonsettings.append('[COLOR red][B]There are %d entries to be removed[/B][/COLOR]'
-                     % data_list_size)
+            # Get an additional count for files that will be deleted
+            temp_start_string = 'SELECT strPath '
+            if not our_select.startswith(temp_start_string):
+                dbglog('Error: expected SQL statement to start with "%s". Actual statement: %s' % (temp_start_string, our_select))
+                xbmcgui.Dialog().ok(addonname,
+                        'Error: expected SQL statement to start with "%s". Actual statement: %s' % (temp_start_string, our_select)
+                                    )
+                self.close()
+                exit_on_error()
+            temp_bookmark_string = 'idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN bookmark ON bookmark.idFile = files.idFile INNER JOIN episode ON episode.idFile = bookmark.idFile)'
+            if bookmarks and our_select.find(temp_bookmark_string) == -1:
+                dbglog('Error: expected SQL statement with bookmarks to have the string "%s". Actual statement: %s' % (temp_bookmark_string, our_select))
+                xbmcgui.Dialog().ok(addonname,
+                        'Error: expected SQL statement with bookmarks to have the string "%s". Actual statement: %s' % (temp_bookmark_string, our_select)
+                                    )
+                self.close()
+                exit_on_error()
+            count_files_statement = our_select
+            if bookmarks:
+                count_files_statement = count_files_statement.replace(temp_start_string, 'SELECT count(*) FROM files WHERE NOT EXISTS (SELECT 1 FROM path WHERE path.idPath = files.idPath) OR (NOT EXISTS (SELECT 1 FROM bookmark WHERE bookmark.idFile = files.idFile) AND idPath IN (SELECT DISTINCT idPath ', 1)
+                count_files_statement = count_files_statement.replace(temp_bookmark_string, 'TRUE', 1)
+                count_files_statement = count_files_statement[:-1] + '))' + count_files_statement[-1:]
+            else:
+                count_files_statement = count_files_statement.replace(temp_start_string, 'SELECT count(*) FROM files WHERE NOT EXISTS (SELECT 1 FROM path WHERE path.idPath = files.idPath) OR idPath IN (SELECT DISTINCT idPath ', 1)
+                count_files_statement = count_files_statement[:-1] + ')' + count_files_statement[-1:]
+            wrapped_execute(cursor, count_files_statement, my_command_list, window=self, suppress_notification=True)
+            # Show the number of records to be removed on the screen
+            temp_number_of_files_to_delete = cursor.fetchall()[0][0]
+            dbglog('There are %d entries to be removed from the path table and %d entries to be removed from the files table'
+                     % (data_list_size, temp_number_of_files_to_delete))
+            self.addonsettings.append('[COLOR red][B]There are %d entries to be removed from the path table and %d entries to be removed from the files table[/B][/COLOR]'
+                     % (data_list_size, temp_number_of_files_to_delete))
+            if global_prepared_list is not None:
+                self.addonsettings.append('[COLOR red][B]There are %d entries to be removed in total from "deep clean".[/B][/COLOR]' % (len(global_prepared_list)))
+            del temp_start_string
+            del temp_bookmark_string
+            del temp_number_of_files_to_delete
+            del count_files_statement
 
         self.container3.addItems(self.addonsettings)
 
@@ -214,6 +254,7 @@ bp_logfile_path = xbmcvfs.translatePath('special://temp/bp-debuglog.log'
 type_of_log = ''
 is_pvr = addon.getSetting('pvr')
 autoclean = addon.getSetting('autoclean')
+autoclean_multiple_times = addon.getSetting('autoclean_multiple_times')
 bookmarks = addon.getSetting('bookmark')
 promptdelete = addon.getSetting('promptdelete')
 source_file_path = addon.getSetting('sourcefilepath')
@@ -225,6 +266,45 @@ backup_filename = addon.getSetting('backupname')
 forcedbname = addon.getSetting('overridedb')
 replacepath = addon.getSetting('replacepath')
 enable_logging = addon.getSetting('logtolog')
+deletesetswithlessthantwo = addon.getSetting('deletesetswithlessthantwo')
+show_notification_for_each_sql_statement = addon.getSetting('show_notification_for_each_sql_statement')
+runtexturecache = addon.getSetting('runtexturecache')
+debugtexturecache = addon.getSetting('debugtexturecache')
+deepclean = addon.getSetting('deepclean')
+deepcleanonlyonedirectory = addon.getSetting('deepcleanonlyonedirectory')
+deepcleanonlyonedirectory_path = addon.getSetting('deepcleanonlyonedirectory_path')
+tc_option_list = []
+for tc_option in 'c, C, lc, p, P, Xd, r, R, qa, qax, duplicates'.replace(' ', '').split(','):
+    if tc_option.lower() != tc_option and tc_option != "Xd":
+        tc_option_s = tc_option + 'cap'
+    else:
+        tc_option_s = tc_option
+    if addon.getSetting('texturecache_' + tc_option_s) == 'true':
+        tc_option_list.append(tc_option)
+if deletesetswithlessthantwo == 'true':
+    deletesetswithlessthantwo = True
+else:
+    deletesetswithlessthantwo = False
+if show_notification_for_each_sql_statement == 'true':
+    show_notification_for_each_sql_statement = True
+else:
+    show_notification_for_each_sql_statement = False
+if runtexturecache == 'true':
+    runtexturecache = True
+else:
+    runtexturecache = False
+if debugtexturecache == 'true':
+    debugtexturecache = True
+else:
+    debugtexturecache = False
+if deepclean == 'true':
+    deepclean = True
+else:
+    deepclean = False
+if deepcleanonlyonedirectory == 'true':
+    deepcleanonlyonedirectory = True
+else:
+    deepcleanonlyonedirectory = False
 if enable_logging == 'true':
     enable_logging = True
     type_of_log = addon.getSetting('typeoflog')
@@ -262,6 +342,10 @@ if debugging == 'true':
     debugging = True
 else:
     debugging = False
+running_dialog = None
+global_logfile = None
+global_source_list = []
+global_prepared_list = None
 
 
 def log(txt):
@@ -269,20 +353,76 @@ def log(txt):
     if isinstance(txt, str):
         txt = txt
         message = u'%s: %s' % (addonname, txt)
-        xbmc.log(msg=message.encode('utf-8'), level=xbmc.LOGDEBUG)
+        xbmc.log(msg=message, level=xbmc.LOGDEBUG)
 
 
 def dbglog(txt):
     if debugging:
         log(txt)
 
+def texturecache_dbglog(txt):
+    if isinstance(txt, str):
+        message = u'%s: %s' % (addonname + ': From texturecache.py', txt)
+        xbmc.log(msg=message, level=xbmc.LOGDEBUG)
 
 def exit_on_error():
+    # Try to make sure we fail gracefully.
+    try:
+        cursor.close()
+    except Exception:
+        pass
+    try:
+        db.rollback()
+    except Exception:
+        pass
+    try:
+        db.close()
+    except Exception:
+        pass
+    try:
+        running_dialog.close()
+    except Exception:
+        pass
     WINDOW.setProperty('database-cleaner-running', 'false')
     exit(1)
 
+def wrapped_execute(cursor, sql, params=None, error_message=None, window=None, suppress_notification=False, progress=1):
+    if not params:
+        params = []
+    if not error_message:
+        error_message = 'Error executing SQL statement. The SQL statement was: %s, called with parameters %s.' % (sql, str(params))
+    try:
+        unwrapped_execute(cursor, sql, params, suppress_notification, progress)
+    except Exception as e:
+        error_message = error_message + ' Error: %s' % (str(e))
+        dbglog(error_message)
+        xbmcgui.Dialog().ok(addonname, error_message)
+        if window:
+            try:
+                window.close()
+            except Exception:
+                pass
+        exit_on_error()
 
-def cleaner_log_file(our_select, cleaning):
+def unwrapped_execute(cursor, sql, params=None, suppress_notification=False, progress=1):
+    global replacepath
+    global show_notification_for_each_sql_statement
+    global running_dialog
+    if not params:
+        params = []
+    dbglog('Executing SQL command - %s - params: %s' % (sql, str(params)))
+    if not replacepath and show_notification_for_each_sql_statement and not suppress_notification:
+        running_dialog = xbmcgui.DialogProgressBG()
+        running_dialog.create('Executing SQL statement - %s - params: %s' % (sql, str(params)))
+        running_dialog.update(min(int(progress),100))
+    cursor.execute(sql, params)
+    if not replacepath and show_notification_for_each_sql_statement and not suppress_notification:
+        try:
+            running_dialog.close()
+        except Exception:
+            pass
+
+def cleaner_log_file(our_select, my_command_list, cleaning):
     cleaner_log = \
         xbmcvfs.translatePath('special://temp/database-cleaner.log')
     old_cleaner_log = \
@@ -326,7 +466,74 @@ def cleaner_log_file(our_select, cleaning):
 
 '''
     logfile.write(logfile_header)
-    cursor.execute(our_select)
+
+    if deepclean and not replacepath and not specificpath and not is_mysql and not no_sources and not remote_file:
+        global global_prepared_list
+        global global_source_list
+        if global_prepared_list is None:
+            temp_params = []
+            temp_like_str = ''
+            if deepcleanonlyonedirectory:
+                if deepcleanonlyonedirectory_path == '':
+                    xbmcgui.Dialog().ok(addonname, 'Deep clean is set to clean only one directory, but the directory path is empty. Not doing deep clean.')
+                    global_source_list = []
+                elif not (deepcleanonlyonedirectory_path.endswith('/') or deepcleanonlyonedirectory_path.endswith('\\')):
+                    xbmcgui.Dialog().ok(addonname, 'Deep clean is set to clean only one directory, but the corresponding directory path does not end with a valid path separator. Not doing deep clean.')
+                    global_source_list = []
+
+            for s in global_source_list:
+                if not s.endswith('/') or s.endswith('\\'):
+                    dbglog('Ignoring source %s because it doesn\'t end with a valid path separator' % (s))
+                elif not deepcleanonlyonedirectory or s.startswith(deepcleanonlyonedirectory_path):
+                    temp_params.append(s + '_%')
+            temp_like_str = ' OR strPath LIKE '.join('?'*len(temp_params))
+            temp_like_str += ')'
+            if excluding:
+                temp_params.extend([e + '%' for e in excludes_list])
+                temp_like_str += ' AND (strPath NOT LIKE '
+                temp_like_str += ' AND strPath NOT LIKE '.join('?'*len(excludes_list))
+                temp_like_str += ')'
+            temp_sql = "SELECT strPath, idPath as id FROM path WHERE (strPath LIKE " + temp_like_str + " UNION SELECT (path.strPath || files.strFilename) as strPath, idFile as id FROM files INNER JOIN path ON files.idPath = path.idPath WHERE (strPath LIKE " + temp_like_str + " ORDER BY strPath"
+            if temp_like_str != '':
+                temp_sql_count = "SELECT count(*) FROM (%s)" % (temp_sql)
+                wrapped_execute(cursor, temp_sql_count, temp_params*2)
+                temp_sql_count = cursor.fetchall()[0][0]
+                temp_files_to_delete_list = []
+                wrapped_execute(cursor, temp_sql, temp_params*2)
+                temp_res = cursor.fetchone()
+                running_dialog = xbmcgui.DialogProgressBG()
+                running_dialog.create('Please wait. Deep clean is verifying files')
+                temp_i = -1
+                while temp_res is not None:
+                    temp_i += 1
+                    if temp_sql_count < 100 or (temp_i % 100) == 0:
+                        running_dialog.update(min(int(100*temp_i/temp_sql_count),100))
+                    if not xbmcvfs.exists(temp_res[0]):
+                        temp_files_to_delete_list.append(temp_res)
+                    temp_res = cursor.fetchone()
+                running_dialog.close()
+                del temp_i
+                del temp_sql_count
+            if temp_like_str == '' or len(temp_files_to_delete_list) == 0:
+                global_prepared_list = []
+            else:
+                global_prepared_list = temp_files_to_delete_list
+            del temp_params
+            del temp_like_str
+            del temp_sql
+        if not len(global_prepared_list) == 0:
+            dbglog('Listsize from "deep clean" is %d' % (len(global_prepared_list)))
+            if not cleaning:
+                logfile.write('The following files and paths would be removed from "deep clean" alone (total %d) (check the remainder of the file for additional paths related to the general cleaning option):\n' % (len(global_prepared_list)))
+            else:
+                logfile.write('The following files and paths were removed from "deep clean" alone (total %d) (check the remainder of the file for additional paths related to the general cleaning option):\n' % (len(global_prepared_list)))
+            for s, _ in global_prepared_list:
+                logfile.write('%s\n' % (s))
+        else:
+            logfile.write('No files or paths to be removed by the "deep clean" option')
+        logfile.write('\n\n\n')
+
+    wrapped_execute(cursor, our_select, my_command_list, window=logfile, suppress_notification=True)
     counting = 0
     my_data = cursor.fetchall()
     listsize = len(my_data)
@@ -370,7 +577,7 @@ def cleaner_log_file(our_select, cleaning):
         for strPath in my_data:
             counting += 1
             mystring = u''.join(strPath) + '\n'
-            outdata = mystring.encode('utf-8')
+            outdata = mystring
             if do_progress:
                 dialog.update(percent=int(counting / float(listsize)
                               * 100))
@@ -382,7 +589,7 @@ def cleaner_log_file(our_select, cleaning):
         for strPath in my_data:
             counting += 1
             mystring = u''.join(strPath) + '\n'
-            outdata = mystring.encode('utf-8')
+            outdata = mystring
             if do_progress:
                 dialog.update(percent=int(counting / float(listsize)
                               * 100))
@@ -393,7 +600,7 @@ def cleaner_log_file(our_select, cleaning):
         for strPath in my_data:
             counting += 1
             mystring = u''.join(strPath) + '\n'
-            outdata = mystring.encode('utf-8')
+            outdata = mystring
             if do_progress:
                 dialog.update(percent=int(counting / float(listsize)
                               * 100))
@@ -408,8 +615,51 @@ def cleaner_log_file(our_select, cleaning):
     logfile.write('''
 
 ''')
-    logfile.close()
+    if not (runtexturecache and debugtexturecache):
+        # We'll delay the closing of the logfile if running texturecache.py with debug
+        logfile.close()
+    else:
+        global global_logfile
+        global_logfile = logfile
 
+def get_texturecache_duplicates_logfile():
+    texturecache_log = \
+        xbmcvfs.translatePath('special://temp/database-cleaner-duplicates.log')
+    old_texturecache_log = \
+        xbmcvfs.translatePath('special://temp/database-cleaner-duplicates.old.log')
+    old_log_contents = ''
+    if type_of_log == '0':
+        dbglog('Writing to new log file')
+        if xbmcvfs.exists(texturecache_log):
+            dbglog('database-cleaner-duplicates.log exists - renaming to old.log'
+                   )
+            xbmcvfs.delete(old_texturecache_log)
+            xbmcvfs.copy(texturecache_log, old_texturecache_log)
+            xbmcvfs.delete(texturecache_log)
+    else:
+        dbglog('Appending to existing log file')
+        if xbmcvfs.exists(texturecache_log):
+            dbglog('database-cleaner-duplicates.log exists - backing up to old.log'
+                   )
+            xbmcvfs.delete(old_texturecache_log)
+            xbmcvfs.copy(texturecache_log, old_texturecache_log)
+        old_log = xbmcvfs.File(texturecache_log)
+        old_log_contents = old_log.read()
+        old_log.close()
+
+    now = datetime.datetime.now()
+    logfile = xbmcvfs.File(texturecache_log, 'w')
+    if old_log_contents:
+        logfile.write(old_log_contents)
+    date_long_format = xbmc.getRegion('datelong')
+    time_format = xbmc.getRegion('time')
+    date_long_format = date_long_format + ' ' + time_format
+    logfile_header = 'Video Database Cleaner V' + addonversion \
+        + ' - Running at ' + now.strftime(date_long_format) + ' - "texturecache.py duplicates" invocation' + '''
+
+'''
+    logfile.write(logfile_header)
+    return logfile
 
 ####    Start Here !!   ####
 
@@ -421,7 +671,7 @@ dbglog('script version %s started' % addonversion)
 # else:
     # WINDOW.setProperty('database-cleaner-running', 'true')
 
-xbmcgui.Dialog().notification(addonname, 'Starting Up',
+xbmcgui.Dialog().notification(addonname, 'Scanning library...',
                               xbmcgui.NOTIFICATION_INFO, 2000)
 xbmc.sleep(2000)
 
@@ -430,7 +680,7 @@ if xbmcvfs.exists(advanced_file):
     found = True
 
 if found:
-    msg = advanced_file.encode('utf-8')
+    msg = advanced_file
     dbglog('looking in advancedsettings for videodatabase info')
     try:
         advancedsettings = ET.parse(advanced_file)
@@ -497,6 +747,10 @@ if autoclean == 'true':
     autoclean = True
 else:
     autoclean = False
+if autoclean_multiple_times == 'true':
+    autoclean_multiple_times = True
+else:
+    autoclean_multiple_times = False
 if bookmarks == 'true':
     bookmarks = True
 else:
@@ -517,6 +771,8 @@ if bookmarks:
     dbglog('Keeping bookmarks')
 if autoclean:
     dbglog('autocleaning afterwards')
+if autoclean_multiple_times:
+    dbglog('autocleaning multiple times')
 if promptdelete:
     dbglog('Prompting before deletion')
 if no_sources:
@@ -553,13 +809,14 @@ elif xbmcvfs.exists(sources_file):
         exit_on_error()
 else:
     xbmcgui.Dialog().notification(addonname,
-                                  'Warning - no sources.xml file found - defaulting to cleaning streaming paths only'
+                                  'Warning - no sources.xml file found'
                                   , xbmcgui.NOTIFICATION_INFO, 3000)
     dbglog('No local sources.xml, no remote sources file set in settings'
            )
     xbmc.sleep(3000)
     no_sources = True
 my_command = ''
+my_command_list = []
 first_time = True
 if forcedbname:
     log('Forcing video db version to %s' % forcedname)
@@ -632,7 +889,7 @@ else:
     if not xbmcvfs.exists(testpath):
         log('Forced version of database does not exist')
         xbmcgui.Dialog().ok(addonname,
-                            'Error - Forced version of database ( %s ) not found. Script will now exit'
+                            'Error - Forced version of database ( %s ) not found.'
                              % forcedname)
         exit_on_error()
     try:
@@ -641,12 +898,13 @@ else:
         dbglog('Connected to forced video database')
     except:
         xbmcgui.Dialog().ok(addonname,
-                            'Error - Unable to connect to forced database %s. Script will now exit'
+                            'Error - Unable to connect to forced database %s.'
                              % forcedname)
         log('Unable to connect to forced database s%' % forcedname)
         exit_on_error()
 
 cursor = db.cursor()
+replstr = '?' if not is_mysql else '%s'
 
 if xbmcvfs.exists(excludes_file):
     excludes_list = []
@@ -659,8 +917,7 @@ if xbmcvfs.exists(excludes_file):
             to_exclude = excludes.text
             excludes_list.append(to_exclude)
             dbglog('Excluding plugin path - %s' % to_exclude)
-            exclude_command = exclude_command \
-                + " AND strPath NOT LIKE '" + to_exclude + "%'"
+            exclude_command = exclude_command + " AND strPath NOT LIKE %s" % (replstr)
         log('Parsed excludes.xml')
     except:
         log('Error parsing excludes.xml')
@@ -687,14 +944,16 @@ if not no_sources:
                         dbglog('%s - %s' % (the_path_name, the_path))
                         if first_time:
                             first_time = False
-                            my_command = "strPath NOT LIKE '" \
-                                + the_path + "%'"
+                            my_command = "strPath NOT LIKE %s" % (replstr)
+                            my_command_list.append(the_path + '%')
+                            global_source_list.append(the_path)
                             our_source_list = 'Keeping files in ' \
                                 + the_path
                         else:
                             my_command = my_command \
-                                + " AND strPath NOT LIKE '" + the_path \
-                                + "%'"
+                                + " AND strPath NOT LIKE %s" % (replstr)
+                            my_command_list.append(the_path + '%')
+                            global_source_list.append(the_path)
                             our_source_list = our_source_list + ', ' \
                                 + the_path
             if path_name == '':
@@ -715,20 +974,22 @@ if not no_sources:
         our_source_list = our_source_list + 'Keeping PVR info '
     if excluding:
         my_command = my_command + exclude_command
+        my_command_list.extend([e + '%' for e in excludes_list])
         our_source_list = our_source_list \
             + 'Keeping items from excludes.xml '
     if bookmarks:
         my_command = my_command \
-            + ' AND idFile NOT IN (SELECT idFile FROM bookmark)'
+            + ' AND idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN bookmark ON bookmark.idFile = files.idFile INNER JOIN episode ON episode.idFile = bookmark.idFile)'
         our_source_list = our_source_list + 'Keeping bookmarked files '
 
         # construct the full SQL query
 
     sql = \
-        """DELETE FROM files WHERE idPath IN(SELECT idPath FROM path where (""" \
+        """DELETE FROM path WHERE ((""" \
         + my_command + """));"""
 if no_sources:
     my_command = ''
+    my_command_list = []
     our_source_list = \
         'NO SOURCES FOUND - REMOVING rtmp(e), plugin and http info '
     dbglog('Not using sources.xml')
@@ -738,10 +999,10 @@ if no_sources:
     if bookmarks:
         if my_command:
             my_command = my_command \
-                + ' AND idFile NOT IN (SELECT idFile FROM bookmark)'
+                + ' AND idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN bookmark ON bookmark.idFile = files.idFile INNER JOIN episode ON episode.idFile = bookmark.idFile)'
         else:
             my_command = my_command \
-                + ' idFile NOT IN (SELECT idFile FROM bookmark)'
+                + ' idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN bookmark ON bookmark.idFile = files.idFile INNER JOIN episode ON episode.idFile = bookmark.idFile)'
         our_source_list = our_source_list + 'Keeping bookmarked files '
     if excluding:
         if my_command:
@@ -749,6 +1010,7 @@ if no_sources:
         else:
             my_command = my_command + exclude_command.replace('AND', ''
                     , 1)
+        my_command_list.extend([e + '%' for e in excludes_list])
         our_source_list = our_source_list \
             + 'Keeping items from excludes.xml '
 
@@ -756,28 +1018,27 @@ if no_sources:
 
 if not no_sources:  # this is SQL for no sources
     sql = \
-        """DELETE FROM files WHERE idPath IN ( SELECT idPath FROM path WHERE ((""" \
+        """DELETE FROM path WHERE (((""" \
         + my_command + """)));"""
 else:
     sql = \
-        """DELETE FROM files WHERE idPath IN (SELECT idPath FROM path WHERE ((strPath LIKE 'rtmp://%' OR strPath LIKE 'rtmpe:%' OR strPath LIKE 'plugin:%' OR strPath LIKE 'http://%' OR strPath LIKE 'https://%') AND (""" \
-        + my_command + """)));"""
+        """DELETE FROM path WHERE ((strPath LIKE 'rtmp://%' OR strPath LIKE 'rtmpe:%' OR strPath LIKE 'plugin:%' OR strPath LIKE 'http://%' OR strPath LIKE 'https://%') AND (""" \
+        + my_command + """));"""
 
 if my_command == '':
-    sql = sql.replace('((strPath', '(strPath').replace(' AND ()))', ')')
+    sql = sql.replace('((strPath', '(strPath').replace(' AND ())', ')')
     dbglog('SQL command is %s' % sql)
 
 if not specificpath and not replacepath:
     dbglog(our_source_list)
-    our_select = sql.replace('DELETE FROM files',
+    our_select = sql.replace('DELETE FROM path',
                              'SELECT strPath FROM path', 1)
 
-    if bookmarks:  # have to delete from paths table rather than files as there is a conflicting trigger on the files table
-        our_select = sql.replace('DELETE FROM files',
-                                 'SELECT strPath FROM path WHERE idPath in (SELECT idPath FROM files'
-                                 , 1)
-        our_select = our_select.replace('bookmark)', 'bookmark))', 1)
-        sql = sql.replace('DELETE FROM files', 'DELETE FROM path', 1)
+    if bookmarks:
+        dbglog(sql)
+        our_select = sql.replace('DELETE FROM path',
+                                 'SELECT strPath FROM path', 1)
+        dbglog(our_select)
         dbglog('Select Command is %s' % our_select)
 elif not replacepath and specificpath:
 
@@ -785,11 +1046,11 @@ elif not replacepath and specificpath:
 
     if specific_path_to_remove != '':
         sql = \
-            """delete from path where idPath in(select * from (SELECT idPath FROM path WHERE (strPath LIKE '""" \
-            + specific_path_to_remove + """%')) as temptable)"""
+            """DELETE FROM path WHERE strPath LIKE %s""" % (replstr)
+        my_command_list = [specific_path_to_remove + '%']
         our_select = \
-            "SELECT strPath FROM path WHERE idPath IN (SELECT idPath FROM path WHERE (strPath LIKE'" \
-            + specific_path_to_remove + "%'))"
+            "SELECT strPath FROM path WHERE strPath LIKE %s" % (replstr)
+        my_command_list = [specific_path_to_remove + '%']
         dbglog('Select Command is %s' % our_select)
     else:
         xbmcgui.Dialog().ok(addonname,
@@ -802,18 +1063,19 @@ else:
       # must be replacing a path at this point
 
     if old_path != '' and new_path != '':
-        our_select = "SELECT strPath from path WHERE strPath Like '" \
-            + old_path + "%'"
+        our_select = \
+            "SELECT strPath FROM path WHERE strPath LIKE %s" % (replstr)
+        my_command_list = [old_path + '%']
     else:
         xbmcgui.Dialog().ok(addonname,
                             'Error - Replace path selected but one or more paths are not defined. Script aborted'
                             )
         dbglog('Error - Missing path for replacement')
         exit_on_error()
-        xbmc.sleep(500)
+xbmc.sleep(500)
 
 if promptdelete:
-    cleaner_log_file(our_select, False)
+    cleaner_log_file(our_select, my_command_list, False)
     mydisplay = MyClass('cleaner-window.xml', addonpath, 'Default',
                         '1080i')
     mydisplay.doModal()
@@ -850,14 +1112,126 @@ if i:
             success = 'failed'
         dbglog('auto backup database %s.db to %s.db - result was %s'
                % (our_dbname, backup_filename, success))
-    cleaner_log_file(our_select, True)
+    cleaner_log_file(our_select, my_command_list, True)
     if not replacepath:
         try:
+            path_sql = sql
+            temp_total_sql_statements = 13
+            temp_ran_sql_statements = -1 
+            # When cleaning a specific path, the path table must be cleaned last so that we don't lose path-specific information
+            # Also, when cleaning a specific path, we don't clean orphaned records not related to the target path
+            if specificpath:
+                temp_total_sql_statements = 10
+                base_sql = "DELETE FROM %s WHERE EXISTS (SELECT 1 FROM files INNER JOIN path ON path.idPath = files.idPath WHERE files.idFile = %s.idFile AND path.strPath LIKE %s)"
+                if bookmarks:
+                    base_sql = base_sql + " AND NOT EXISTS (SELECT 1 FROM bookmark WHERE bookmark.idFile = %s.idFile)"
+                for table in 'bookmark settings stacktimes movie episode musicvideo streamdetails'.split(' '):
+                    if bookmarks:
+                        sql = base_sql % (table, table, replstr, table)
+                    else:
+                        sql = base_sql % (table, table, replstr)
+                    temp_ran_sql_statements = temp_ran_sql_statements + 1
+                    unwrapped_execute(cursor, sql, [specificpath + '%'], progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                base_sql = "DELETE FROM files WHERE EXISTS (SELECT 1 FROM files INNER JOIN path ON path.idPath = files.idPath AND path.strPath LIKE %s)"
+                if bookmarks:
+                    base_sql = base_sql + " AND NOT EXISTS (SELECT 1 FROM bookmark WHERE bookmark.idFile = files.idFile)"
+                sql = base_sql % (replstr)
+                temp_ran_sql_statements = temp_ran_sql_statements + 1
+                unwrapped_execute(cursor, sql, [specificpath + '%'], progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                base_sql = "DELETE FROM tvshow WHERE EXISTS (SELECT 1 FROM tvshow INNER JOIN tvshowlinkpath ON tvshow.idShow = tvshowlinkpath.idShow INNER JOIN path ON tvshowlinkpath.idPath = path.idPath WHERE path.strPath LIKE %s"
+                if bookmarks:
+                    base_sql = base_sql + " AND idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN episode ON episode.idFile = bookmark.idFile))"
+                else:
+                    base_sql = base_sql + ")"
+                sql = base_sql % (replstr)
+                temp_ran_sql_statements = temp_ran_sql_statements + 1
+                unwrapped_execute(cursor, sql, [specificpath + '%'], progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                base_sql = "DELETE FROM tvshowlinkpath WHERE EXISTS (SELECT 1 FROM tvshowlinkpath INNER JOIN path ON tvshowlinkpath.idPath = path.idPath WHERE path.strPath LIKE %s"
+                if bookmarks:
+                    base_sql = base_sql + " AND idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN bookmark ON bookmark.idFile = files.idFile INNER JOIN episode ON episode.idFile = bookmark.idFile))"
+                else:
+                    base_sql = base_sql + ")"
+                sql = base_sql % (replstr)
+                temp_ran_sql_statements = temp_ran_sql_statements + 1
+                unwrapped_execute(cursor, sql, [specificpath + '%'], progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                del base_sql
 
-        # Execute the SQL command
 
-            dbglog('Executing SQL command - %s' % sql)
-            cursor.execute(sql)
+            # Perform deep clean
+            if global_prepared_list is not None and len(global_prepared_list) > 0:
+                temp_scale_factor = min(len(global_prepared_list), temp_total_sql_statements)
+                temp_total_sql_statements += temp_scale_factor
+                temp_deepclean_count = 0
+                temp_debugging = debugging
+                if len(global_prepared_list) > 100:
+                    debugging = False
+                running_dialog = xbmcgui.DialogProgressBG()
+                running_dialog.create('Please wait while deep clean runs.')
+                for temp_s, temp_id in global_prepared_list:
+                    temp_deepclean_count += 1
+                    if temp_s.endswith('/') or temp_s.endswith('\\'):
+                        sql = "DELETE FROM path WHERE idPath = ?"
+                    else:
+                        sql = "DELETE FROM files WHERE idFile = ?"
+                    unwrapped_execute(cursor, sql, [temp_id], suppress_notification=True)
+                    if len(global_prepared_list) < 100 or (temp_deepclean_count % 100) == 0:
+                        running_dialog.update(min(int(100*(temp_deepclean_count/len(global_prepared_list))*temp_scale_factor/temp_total_sql_statements), 100))
+                running_dialog.close()
+                debugging = temp_debugging
+                temp_ran_sql_statements = temp_ran_sql_statements + temp_scale_factor
+                del temp_debugging
+                del global_prepared_list
+                del temp_scale_factor
+                del temp_deepclean_count
+
+        # Perform clean-up of the path table
+
+            sql = path_sql
+            temp_ran_sql_statements = temp_ran_sql_statements + 1
+            unwrapped_execute(cursor, sql, my_command_list, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+
+
+            # When not doing a specific path, we clean all orphaned records that are left over after the path table is cleaned
+            if not specificpath:
+                sql = "DELETE FROM files WHERE NOT EXISTS (SELECT 1 FROM path WHERE path.idPath = files.idPath)"
+                if bookmarks:
+                    temp_start_string = 'DELETE FROM path '
+                    if not path_sql.startswith(temp_start_string):
+                        raise Exception('Error: (This error is internal to script and not related to the database): expected SQL statement to start with "%s". Actual statement: %s' % (temp_start_string, path_sql))
+                    temp_bookmark_string = 'idPath NOT IN (SELECT DISTINCT idPath FROM files INNER JOIN bookmark ON bookmark.idFile = files.idFile UNION SELECT DISTINCT idParentPath FROM path INNER JOIN files ON files.idPath = path.idPath INNER JOIN bookmark ON bookmark.idFile = files.idFile INNER JOIN episode ON episode.idFile = bookmark.idFile)'
+                    if path_sql.find(temp_bookmark_string) == -1:
+                        raise Exception('Error: (This error is internal to script and not related to the database): expected SQL statement with bookmarks to have the string "%s". Actual statement: %s' % (temp_bookmark_string, path_sql))
+                    sql = sql + path_sql.replace(temp_start_string, ' OR (NOT EXISTS (SELECT 1 FROM bookmark WHERE bookmark.idFile = files.idFile) AND idPath IN (SELECT DISTINCT idPath FROM path ', 1)
+                    sql = sql.replace(temp_bookmark_string, 'TRUE', 1)
+                    sql = sql[:-1] + '))' + sql[-1:]
+                    temp_ran_sql_statements = temp_ran_sql_statements + 1
+                    unwrapped_execute(cursor, sql, my_command_list, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                    del temp_start_string
+                    del temp_bookmark_string
+                else:
+                    temp_ran_sql_statements = temp_ran_sql_statements + 1
+                    unwrapped_execute(cursor, sql, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                base_sql = "DELETE FROM %s WHERE NOT EXISTS (SELECT 1 FROM files WHERE files.idFile = %s.idFile)"
+                for table in 'bookmark settings stacktimes movie episode musicvideo streamdetails'.split(' '):
+                    sql = base_sql % (table, table)
+                    temp_ran_sql_statements = temp_ran_sql_statements + 1
+                    unwrapped_execute(cursor, sql, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                base_sql = "DELETE FROM %s WHERE NOT EXISTS (SELECT 1 FROM %s WHERE %s.%s = %s.%s)"
+                for table, source, field in (('tvshowlinkpath', 'path', 'idPath'), ('tvshow', 'tvshowlinkpath', 'idShow'), ('actor', 'actor_link', 'actor_id'), ('studio', 'studio_link', 'studio_id')):
+                    sql = base_sql % (table, source, table, field, source, field)
+                    temp_ran_sql_statements = temp_ran_sql_statements + 1
+                    unwrapped_execute(cursor, sql, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                base_sql = "DELETE FROM sets WHERE NOT EXISTS (SELECT 1 FROM movie WHERE movie.idSet = sets.idSet GROUP BY idSet HAVING count(idSet) > %s)"
+                if deletesetswithlessthantwo:
+                    sql = base_sql % ("1")
+                else:
+                    sql = base_sql % ("0")
+                temp_ran_sql_statements = temp_ran_sql_statements + 1
+                unwrapped_execute(cursor, sql, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
+                del base_sql
+            del path_sql
+            del temp_total_sql_statements
+            del temp_ran_sql_statements
 
 #           cursor.execute(sql2)
         # Commit the changes in the database
@@ -876,12 +1250,14 @@ if i:
             dbglog('**   %s ' % e)
             dbglog('******************************************************************************'
                    )
+            xbmcgui.Dialog().ok(addonname,
+                        'Error in db commit. Transaction rolled back')
+            exit_on_error()
     else:
 
         dbglog('Changing Paths - generating SQL statements')
-        our_select = "SELECT strPath from path WHERE strPath Like '" \
-            + old_path + "%'"
-        cursor.execute(our_select)
+        our_select = "SELECT strPath FROM path WHERE strPath LIKE %s" % (replstr)
+        wrapped_execute(cursor, our_select, [old_path + '%'])
         tempcount = 0
         listsize = len(cursor.fetchall())
         dialog = xbmcgui.DialogProgressBG()
@@ -889,7 +1265,7 @@ if i:
         dialog.create('Replacing paths in database.  Please wait')
         dialog.update(1)
         dbglog('Cursor size is %d' % listsize)
-        cursor.execute(our_select)
+        wrapped_execute(cursor, our_select, [old_path + '%'], window=dialog)
         renamepath_list = []
         for strPath in cursor:  # build a list of paths to change
             renamepath_list.append(''.join(strPath))
@@ -898,21 +1274,25 @@ if i:
             tempcount += 1
             our_old_path = renamepath_list[i]
             our_new_path = our_old_path.replace(old_path, new_path, 1)
-            sql = 'UPDATE path SET strPath ="' + our_new_path \
-                + '" WHERE strPath LIKE "' + our_old_path + '"'
+            sql = 'UPDATE path SET strPath = %s WHERE strPath = %s' % (replstr, replstr)
             dialog.update(percent=int(tempcount / float(listsize)
                           * 100))
             dbglog('Percentage done %d' % int(tempcount
                    / float(listsize) * 100))
             dbglog('SQL - %s' % sql)
-            try:
-                cursor.execute(sql)
-                db.commit()
-            except Exception as e:
-                e = str(e)
-                db.rollback()
-                dbglog('Error in db commit %s. Transaction rolled back'
-                       % e)
+            wrapped_execute(cursor, sql, [our_new_path, our_old_path], window = dialog)
+        try:
+            db.commit()
+        except Exception as e:
+            e = str(e)
+            db.rollback()
+            dbglog('Error in db commit %s. Transaction rolled back'
+                   % e)
+            xbmcgui.Dialog().ok(addonname,
+                                'Error in db commit %s. Transaction rolled back'
+                                % e)
+            dialog.close()
+            exit_on_error()
 
     # disconnect from server
 #       xbmc.executebuiltin( "Dialog.Close(busydialog)" )
@@ -920,8 +1300,10 @@ if i:
         xbmc.sleep(1000)
         dbglog('Closing progress dialog')
         dialog.close()
-    db.close()
-    dbglog('Database connection closed')
+    # When calling the Kodi's built-in library cleaning function multiple times, we want the db connection open so we can know when to stop early
+    if not (autoclean and autoclean_multiple_times):
+        db.close()
+        dbglog('Database connection closed')
 
     # Make sure replacing or changing a path is a one-shot deal
 
@@ -934,24 +1316,138 @@ if i:
                 xbmcgui.NOTIFICATION_INFO, 2000)
         xbmc.sleep(2000)
 
-        json_query = \
-            xbmc.executeJSONRPC('{ "jsonrpc": "2.0", "method": "VideoLibrary.Clean","id": 1 }'
-                                )
+        temp_previous_pathnum = 0
+        temp_previous_filenum = 0
+        temp_pathnum = -1
+        temp_filenum = -1
+        temp_sql = ''
+        for _ in range(6):
+            json_query = \
+                xbmc.executeJSONRPC('{ "jsonrpc": "2.0", "method": "VideoLibrary.Clean","id": 1 }'
+                                    )
+            # json_query = str(json_query)
 
-        # json_query = str(json_query)
+            json_query = jsoninterface.loads(json_query)
+            if 'result' in json_query:
+                dbglog('Clean library sucessfully called')
+            if not autoclean_multiple_times:
+                break
+            try:
+                temp_sql = "SELECT count(*) FROM path"
+                unwrapped_execute(cursor, temp_sql, params=[], suppress_notification=True)
+                temp_pathnum = cursor.fetchall()[0][0]
+                temp_sql = "SELECT count(*) FROM files"
+                unwrapped_execute(cursor, temp_sql, params=[], suppress_notification=True)
+                temp_filenum = cursor.fetchall()[0][0]
+                if temp_pathnum == temp_previous_pathnum and temp_filenum == temp_previous_filenum:
+                    break
+                temp_previous_pathnum = temp_pathnum
+                temp_previous_filenum = temp_filenum
+                xbmc.sleep(1000)
+            except Exception as e:
+                xbmcgui.Dialog().ok(addonname,
+                        'An error occured while trying to run Kodi\'s built-in library cleaning function multiple times. This does not affect the add-on cleaning, which was already saved (commited to the database). Error: %s' % (str(e))
+                                    )
+                break
+        if autoclean_multiple_times:
+            db.close()
+            dbglog('Database connection closed')
+        del temp_previous_pathnum
+        del temp_previous_filenum
+        del temp_pathnum
+        del temp_filenum
+        del temp_sql
 
-        json_query = jsoninterface.loads(json_query)
-        if 'result' in json_query:
-            dbglog('Clean library sucessfully called')
     else:
         xbmcgui.Dialog().ok(addonname,
                             'Script finished.  You should run clean library for best results'
                             )
+    if runtexturecache and not specificpath and not replacepath:
+        xbmcgui.Dialog().notification(addonname, 'Running "texturecache.py"',
+                 xbmcgui.NOTIFICATION_INFO, 2000)
+        running_dialog = xbmcgui.DialogProgressBG()
+        running_dialog.create('Running "texturecache.py".')
+        try:
+            import importlib as imp
+        except Exception:
+            import imp
+        import sys
+        import resources.texturecache
+
+        class StubClass(object):
+            def is_set():
+                return False
+        class StubClass2(object):
+            def __init__(self, stdout):
+                self.stdout = stdout
+                self.isduplicates = False
+                self.duplicateslogfile = None
+                self.stdlogfile = None
+            def __getattribute__(self, attr):
+                if attr in ('stdout', 'write', 'detach', 'isduplicates', 'duplicateslogfile', 'stdlogfile'):
+                    return object.__getattribute__(self, attr)
+                else:
+                    return object.__getattribute__(self, 'stdout').__getattribute__(attr)
+            def write(self, msg):
+                if isinstance(msg, bytes):
+                    try:
+                        msg = msg.decode('utf-8')
+                    except Exception:
+                        pass
+                msg = str(msg).replace('\r', '\n')
+                if debugtexturecache and not self.isduplicates:
+                    return self.stdlogfile.write(msg)
+                elif self.isduplicates:
+                    return self.duplicateslogfile.write(msg)
+            def detach(self):
+                return self
+        temp_stdout = sys.stdout
+        temp_stderr = sys.stderr
+        temp_repl_stdout = StubClass2(sys.stdout)
+        if debugtexturecache:
+            temp_repl_stdout.stdlogfile = global_logfile
+        for tc_num, tc_option in enumerate(tc_option_list):
+            try:
+                running_dialog.update(int(tc_num / len(tc_option_list) * 100), 'Running "texturecache.py %s". Please wait.' % tc_option)
+                resources.texturecache.stopped = StubClass()
+                if tc_option == 'duplicates':
+                    temp_repl_stdout.duplicateslogfile = get_texturecache_duplicates_logfile()
+                    temp_repl_stdout.isduplicates = True
+                else:
+                    temp_repl_stdout.write('Running "texturecachepy %s"\n' % tc_option)
+                sys.stdout = temp_repl_stdout
+                sys.stderr = sys.stdout
+                resources.texturecache.main([tc_option])
+            except BaseException:
+                pass
+            finally:
+                sys.stdout = temp_stdout
+                sys.stderr = temp_stderr
+                if tc_option == 'duplicates':
+                    try:
+                        temp_repl_stdout.duplicateslogfile.close()
+                    except Exception:
+                        pass
+                    temp_repl_stdout.isduplicates = False
+                imp.reload(resources.texturecache)
+        if debugtexturecache:
+            try:
+                global_logfile.close()
+            except Exception:
+                pass
+        running_dialog.close()
+        xbmcgui.Dialog().notification(addonname, 'Finished running "texturecache.py',
+                 xbmcgui.NOTIFICATION_INFO, 2000)
+        xbmc.sleep(3000)
+        del temp_stdout
+        del temp_stderr
+        del temp_repl_stdout
+
     dbglog('Script finished')
 else:
 
     xbmcgui.Dialog().notification(addonname,
-                                  'Script aborted - No changes made',
+                                  'Exit - No changes made',
                                   xbmcgui.NOTIFICATION_INFO, 3000)
     dbglog('script aborted by user - no changes made')
     WINDOW.setProperty('database-cleaner-running', 'false')

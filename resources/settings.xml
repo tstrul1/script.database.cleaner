@@ -2,12 +2,15 @@
 <settings>
     <category label="32001">
 		<setting type="lsep"/>
+        <setting id="show_notification_for_each_sql_statement" label="32045" type="bool" default="false"/>
         <setting id="pvr" label="32002" type="bool" default="false"/>
         <setting id="bookmark" label="32006" type="bool" default="false"/>
         <setting id="autoclean" label="32003" type="bool" default="true"/>
+        <setting id="autoclean_multiple_times" label="32046" type="bool" default="false" enable="eq(-1,true)"/>
         <setting id="autobackup" label="32015" type="bool" default="true"/>
         <setting id="backupname" label="32016" type="text" default="" enable="eq(-1,true)"/>
         <setting id="promptdelete" label="32007" type="bool" default="true"/>
+	<setting id="deletesetswithlessthantwo" label="32030" type="bool" default="false"/>
     </category>
 		<category label="32004">
 		<setting type="lsep"/>
@@ -35,5 +38,27 @@
 		<setting type="lsep"/>
 		<setting id="overridedb" label="32018" type="bool" default="false"/>
 		<setting id="forceddbname" label="32019" type="text" default="" enable="eq(-1,true)"/>
+    </category>
+    <category label="32031">
+		<setting type="lsep"/>
+		<setting id="runtexturecache" label="32043" type="bool" default="false"/>
+                <setting id="texturecache_c" label="32032" subsetting="true" type="bool" default="false" enable="eq(-1,true)"/>
+                <setting id="texturecache_Ccap" label="32033" subsetting="true" type="bool" default="false" enable="eq(-2,true)"/>
+                <setting id="texturecache_lc" label="32034" subsetting="true" type="bool" default="false" enable="eq(-3,true)"/>
+                <setting id="texturecache_p" label="32035" subsetting="true" type="bool" default="false" enable="eq(-4,true)"/>
+                <setting id="texturecache_Pcap" label="32036" subsetting="true" type="bool" default="true" enable="eq(-5,true)"/>
+                <setting id="texturecache_Xd" label="32037" subsetting="true" type="bool" default="true" enable="eq(-6,true)"/>
+                <setting id="texturecache_r" label="32038" subsetting="true" type="bool" default="false" enable="eq(-7,true)"/>
+                <setting id="texturecache_Rcap" label="32039" subsetting="true" type="bool" default="true" enable="eq(-8,true)"/>
+                <setting id="texturecache_qa" label="32040" subsetting="true" type="bool" default="false" enable="eq(-9,true)"/>
+                <setting id="texturecache_qax" label="32041" subsetting="true" type="bool" default="false" enable="eq(-10,true)"/>
+                <setting id="texturecache_duplicates" label="32042" subsetting="true" type="bool" default="false" enable="eq(-11,true)"/>
+		<setting id="debugtexturecache" label="32044" type="bool" default="false"/>
+    </category>
+    <category label="32047">
+		<setting type="lsep"/>
+		<setting id="deepclean" label="32048" type="bool" default="false"/>
+		<setting id="deepcleanonlyonedirectory" label="32049" type="bool" default="false" enable="eq(-1,true)"/>
+		<setting id="deepcleanonlyonedirectory_path" label="32050" type="folder" source="video" enable="eq(-1,true)"/>
     </category>
 </settings>
