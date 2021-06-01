@@ -177,7 +177,7 @@ msgid "qax: Remove and then rescan of any media found to fail the QA tests"
 msgstr "" 
 
 msgctxt "#32042"
-msgid "duplicates - Run \"texturecache.py duplicates\" after this add-on is finished"
+msgid "duplicates: Lists duplicate movies"
 msgstr "" 
 
 msgctxt "#32043"
@@ -193,11 +193,11 @@ msgid "Show notification for each SQL statement run"
 msgstr ""
 
 msgctxt "#32047"
-msgid "Deep clean (SLOW!)"
+msgid "Deep Clean"
 msgstr ""
 
 msgctxt "#32048"
-msgid "(WARNING)Compares actual existing media to sources.xml."
+msgid "(WARNING) Compares actual media to sources.xml."
 msgstr ""
 
 msgctxt "#32049"
