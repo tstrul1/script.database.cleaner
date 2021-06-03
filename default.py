@@ -473,6 +473,7 @@ def cleaner_log_file(our_select, my_command_list, cleaning):
         if global_prepared_list is None:
             temp_params = []
             temp_like_str = ''
+            temp_atleastonesource = False
             if deepcleanonlyonedirectory:
                 if deepcleanonlyonedirectory_path == '':
                     xbmcgui.Dialog().ok(addonname, 'Deep clean is set to clean only one directory, but the directory path is empty. Not doing deep clean.')
@@ -482,10 +483,13 @@ def cleaner_log_file(our_select, my_command_list, cleaning):
                     global_source_list = []
 
             for s in global_source_list:
-                if not s.endswith('/') or s.endswith('\\'):
+                if not (s.endswith('/') or s.endswith('\\')):
                     dbglog('Ignoring source %s because it doesn\'t end with a valid path separator' % (s))
                 elif not deepcleanonlyonedirectory or s.startswith(deepcleanonlyonedirectory_path):
                     temp_params.append(s + '_%')
+                    temp_atleastonesource = True
+                else:
+                    dbglog('Ignoring source %s because it doesn\'t match parameters: deepcleanonlyonedirectory: %r, s.startswith(deepcleanonlyonedirectory_path): %r' % (s, deepcleanonlyonedirectory, s.startswith(deepcleanonlyonedirectory_path)))
             temp_like_str = ' OR strPath LIKE '.join('?'*len(temp_params))
             temp_like_str += ')'
             if excluding:
@@ -494,7 +498,7 @@ def cleaner_log_file(our_select, my_command_list, cleaning):
                 temp_like_str += ' AND strPath NOT LIKE '.join('?'*len(excludes_list))
                 temp_like_str += ')'
             temp_sql = "SELECT strPath, idPath as id FROM path WHERE (strPath LIKE " + temp_like_str + " UNION SELECT (path.strPath || files.strFilename) as strPath, idFile as id FROM files INNER JOIN path ON files.idPath = path.idPath WHERE (strPath LIKE " + temp_like_str + " ORDER BY strPath"
-            if temp_like_str != '':
+            if temp_atleastonesource:
                 temp_sql_count = "SELECT count(*) FROM (%s)" % (temp_sql)
                 wrapped_execute(cursor, temp_sql_count, temp_params*2)
                 temp_sql_count = cursor.fetchall()[0][0]
@@ -514,12 +518,15 @@ def cleaner_log_file(our_select, my_command_list, cleaning):
                 running_dialog.close()
                 del temp_i
                 del temp_sql_count
-            if temp_like_str == '' or len(temp_files_to_delete_list) == 0:
+            else:
+                dbglog('The "deep clean" option found no valid sources to check.')
+            if not temp_atleastonesource or len(temp_files_to_delete_list) == 0:
                 global_prepared_list = []
             else:
                 global_prepared_list = temp_files_to_delete_list
             del temp_params
             del temp_like_str
+            del temp_atleastonesource
             del temp_sql
         if not len(global_prepared_list) == 0:
             dbglog('Listsize from "deep clean" is %d' % (len(global_prepared_list)))
