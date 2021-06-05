@@ -55,6 +55,55 @@
                 <setting id="texturecache_duplicates" label="32042" subsetting="true" type="bool" default="false" enable="eq(-11,true)"/>
 		<setting id="debugtexturecache" label="32044" type="bool" default="false"/>
     </category>
+    <category label="33000">
+		<setting type="lsep"/>
+		<setting id="tc_opt_userdata_bool" label="33001" type="bool" default="false"/>
+		<setting id="tc_opt_userdata_value" label="33002" type="text" default="~/.xbmc/userdata/" enable="eq(-1,true)"/>
+		<setting id="tc_opt_dbfile_bool" label="33003" type="bool" default="false"/>
+		<setting id="tc_opt_dbfile_value" label="33004" type="text" default="Database/Textures13.db" enable="eq(-1,true)"/>
+		<setting id="tc_opt_thumbnails_bool" label="33005" type="bool" default="false"/>
+		<setting id="tc_opt_thumbnails_value" label="33006" type="text" default="Thumbnails/" enable="eq(-1,true)"/>
+		<setting id="tc_opt_xbmc.host_bool" label="33007" type="bool" default="false"/>
+        <setting id="tc_opt_xbmc.host_value" label="33008" type="text" default="localhost" enable="eq(-1,true)"/>
+		<setting id="tc_opt_webserver.port_bool" label="33009" type="bool" default="false"/>
+        <setting id="tc_opt_webserver.port_value" label="33010" type="text" default="8080" enable="eq(-1,true)"/>
+		<setting id="tc_opt_rpc.port_bool" label="33011" type="bool" default="false"/>
+        <setting id="tc_opt_rpc.port_value" label="33012" type="text" default="9090" enable="eq(-1,true)"/>
+		<setting id="tc_opt_download.threads_bool" label="33013" type="bool" default="false"/>
+        <setting id="tc_opt_download.threads_value" label="33014" type="text" default="20" enable="eq(-1,true)"/>
+		<setting id="tc_opt_orphan.limit.check_bool" label="33015" type="bool" default="false"/>
+        <setting id="tc_opt_orphan.limit.check_value" label="33016" type="text" default="no" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.albums_bool" label="33017" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.albums_value" label="33018" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.artists_bool" label="33019" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.artists_value" label="33020" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.songs_bool" label="33021" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.songs_value" label="33022" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.movies_bool" label="33023" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.movies_value" label="33024" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.sets_bool" label="33025" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.sets_value" label="33026" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.tvshows.tvshow_bool" label="33027" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.tvshows.tvshow_value" label="33028" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.tvshows.season_bool" label="33029" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.tvshows.season_value" label="33030" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_extrajson.tvshows.episode_bool" label="33031" type="bool" default="false"/>
+        <setting id="tc_opt_extrajson.tvshows.episode_value" label="33032" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_qaperiod_bool" label="33033" type="bool" default="false"/>
+        <setting id="tc_opt_qaperiod_value" label="33034" type="text" default="30" enable="eq(-1,true)"/>
+		<setting id="tc_opt_qa.file_bool" label="33035" type="bool" default="false"/>
+        <setting id="tc_opt_qa.file_value" label="33036" type="text" default="no" enable="eq(-1,true)"/>
+		<setting id="tc_opt_cache.castthumb_bool" label="33037" type="bool" default="false"/>
+        <setting id="tc_opt_cache.castthumb_value" label="33038" type="text" default="no" enable="eq(-1,true)"/>
+		<setting id="tc_opt_logfile_bool" label="33039" type="bool" default="false"/>
+        <setting id="tc_opt_logfile_value" label="33040" type="text" default="" enable="eq(-1,true)"/>
+		<setting id="tc_opt_logfile.verbose_bool" label="33041" type="bool" default="false"/>
+        <setting id="tc_opt_logfile.verbose_value" label="33042" type="text" default="no" enable="eq(-1,true)"/>
+		<setting id="tc_opt_network.mac_bool" label="33043" type="bool" default="false"/>
+        <setting id="tc_opt_network.mac_value" label="33044" type="text" default="aa:bb:cc:dd:ee:ff" enable="eq(-1,true)"/>
+		<setting id="tc_opt_allow.recacheall_bool" label="33045" type="bool" default="false"/>
+        <setting id="tc_opt_allow.recacheall_value" label="33046" type="text" default="yes" enable="eq(-1,true)"/>
+    </category>
     <category label="32047">
 		<setting type="lsep"/>
 		<setting id="deepclean" label="32048" type="bool" default="false"/>

@@ -207,3 +207,191 @@ msgstr ""
 msgctxt "#32050"
 msgid "(click here to change directory to clean)"
 msgstr ""
+
+msgctxt "#33000"
+msgid "\"texturecache.cfg\" options"
+msgstr ""
+
+msgctxt "#33001"
+msgid "Enable option userdata"
+msgstr ""
+
+msgctxt "#33002"
+msgid "userdata = "
+msgstr ""
+
+msgctxt "#33003"
+msgid "Enable option dbfile"
+msgstr ""
+
+msgctxt "#33004"
+msgid "dbfile = "
+msgstr ""
+
+msgctxt "#33005"
+msgid "Enable option thumbnails"
+msgstr ""
+
+msgctxt "#33006"
+msgid "thumbnails = "
+msgstr ""
+
+msgctxt "#33007"
+msgid "Enable option xbmc.host"
+msgstr ""
+
+msgctxt "#33008"
+msgid "xbmc.host = "
+msgstr ""
+
+msgctxt "#33009"
+msgid "Enable option webserver.port"
+msgstr ""
+
+msgctxt "#33010"
+msgid "webserver.port = "
+msgstr ""
+
+msgctxt "#33011"
+msgid "Enable option rpc.port"
+msgstr ""
+
+msgctxt "#33012"
+msgid "rpc.port = "
+msgstr ""
+
+msgctxt "#33013"
+msgid "Enable option download.threads"
+msgstr ""
+
+msgctxt "#33014"
+msgid "download.threads = "
+msgstr ""
+
+msgctxt "#33015"
+msgid "Enable option orphan.limit.check"
+msgstr ""
+
+msgctxt "#33016"
+msgid "orphan.limit.check = "
+msgstr ""
+
+msgctxt "#33017"
+msgid "Enable option extrajson.albums"
+msgstr ""
+
+msgctxt "#33018"
+msgid "extrajson.albums = "
+msgstr ""
+
+msgctxt "#33019"
+msgid "Enable option extrajson.artists"
+msgstr ""
+
+msgctxt "#33020"
+msgid "extrajson.artists = "
+msgstr ""
+
+msgctxt "#33021"
+msgid "Enable option extrajson.songs"
+msgstr ""
+
+msgctxt "#33022"
+msgid "extrajson.songs = "
+msgstr ""
+
+msgctxt "#33023"
+msgid "Enable option extrajson.movies"
+msgstr ""
+
+msgctxt "#33024"
+msgid "extrajson.movies = "
+msgstr ""
+
+msgctxt "#33025"
+msgid "Enable option extrajson.sets"
+msgstr ""
+
+msgctxt "#33026"
+msgid "extrajson.sets = "
+msgstr ""
+
+msgctxt "#33027"
+msgid "Enable option extrajson.tvshows.tvshow"
+msgstr ""
+
+msgctxt "#33028"
+msgid "extrajson.tvshows.tvshow = "
+msgstr ""
+
+msgctxt "#33029"
+msgid "Enable option extrajson.tvshows.season"
+msgstr ""
+
+msgctxt "#33030"
+msgid "extrajson.tvshows.season = "
+msgstr ""
+
+msgctxt "#33031"
+msgid "Enable option extrajson.tvshows.episode"
+msgstr ""
+
+msgctxt "#33032"
+msgid "extrajson.tvshows.episode = "
+msgstr ""
+
+msgctxt "#33033"
+msgid "Enable option qaperiod"
+msgstr ""
+
+msgctxt "#33034"
+msgid "qaperiod = "
+msgstr ""
+
+msgctxt "#33035"
+msgid "Enable option qa.file"
+msgstr ""
+
+msgctxt "#33036"
+msgid "qa.file = "
+msgstr ""
+
+msgctxt "#33037"
+msgid "Enable option cache.castthumb"
+msgstr ""
+
+msgctxt "#33038"
+msgid "cache.castthumb = "
+msgstr ""
+
+msgctxt "#33039"
+msgid "Enable option logfile"
+msgstr ""
+
+msgctxt "#33040"
+msgid "logfile = "
+msgstr ""
+
+msgctxt "#33041"
+msgid "Enable option logfile.verbose"
+msgstr ""
+
+msgctxt "#33042"
+msgid "logfile.verbose = "
+msgstr ""
+
+msgctxt "#33043"
+msgid "Enable option network.mac"
+msgstr ""
+
+msgctxt "#33044"
+msgid "network.mac = "
+msgstr ""
+
+msgctxt "#33045"
+msgid "Enable option allow.recacheall"
+msgstr ""
+
+msgctxt "#33046"
+msgid "allow.recacheall = "
+msgstr ""

@@ -678,6 +678,123 @@ dbglog('script version %s started' % addonversion)
 # else:
     # WINDOW.setProperty('database-cleaner-running', 'true')
 
+if runtexturecache:
+    tccfg_option_dict = {}
+    for tccfg_option in ('userdata', 'dbfile', 'thumbnails', 'xbmc.host', 'webserver.port', 'rpc.port', 'download.threads', 'orphan.limit.check', 'extrajson.albums', 'extrajson.artists', 'extrajson.songs', 'extrajson.movies', 'extrajson.sets', 'extrajson.tvshows.tvshow', 'extrajson.tvshows.season', 'extrajson.tvshows.episode', 'qaperiod', 'qa.file', 'cache.castthumb', 'logfile', 'logfile.verbose', 'network.mac', 'allow.recacheall'):
+        temp_tccfg_opt_bool = 'false'
+        temp_tccfg_opt_bool = addon.getSetting('tc_opt_' + tccfg_option + '_bool')
+        temp_tccfg_opt_bool = True if temp_tccfg_opt_bool == 'true' else False
+        tccfg_option_dict[tccfg_option] = (temp_tccfg_opt_bool, addon.getSetting('tc_opt_' + tccfg_option + '_value'))
+    del temp_tccfg_opt_bool
+    tccfg_from_file_dict = {}
+    tccfg_from_bfile_dict = {}
+    tccfg_file_path = xbmcvfs.translatePath('special://home/addons/script.database.cleaner/resources/texturecache.cfg')
+    tccfg_bfile_path = xbmcvfs.translatePath('special://home/addons/script.database.cleaner/resources/donotedit.tccfg.bak')
+    tccfg_overwrite_existing = False
+    temp_filecontents = ''
+    if not xbmcvfs.exists(tccfg_bfile_path) and not xbmcvfs.exists(tccfg_file_path):
+        tccfg_overwrite_existing = True
+    else:
+        if not xbmcvfs.exists(tccfg_file_path):
+            tccfg_overwrite_existing = True
+        else:
+            if xbmcvfs.exists(tccfg_bfile_path):
+                with xbmcvfs.File(tccfg_bfile_path) as temp_f:
+                    temp_all_lines = temp_f.read().split('\n')
+                    for temp_line in temp_all_lines:
+                        temp_line += '\n'
+                        if len(temp_line.split('=')) < 2:
+                            continue
+                        if temp_line.startswith('#'):
+                            temp_line = temp_line[1:]
+                            temp_line_active = False
+                        else:
+                            temp_line_active = True
+                        temp_optname = temp_line.split('=')[0].strip()
+                        temp_optvalue = temp_line.split('=')[1].strip()
+                        if temp_optname in tccfg_option_dict:
+                            tccfg_from_bfile_dict[temp_optname] = (temp_line_active, temp_optvalue)
+                    del temp_all_lines
+            else:
+                tccfg_from_bfile_dict = tccfg_option_dict
+            with xbmcvfs.File(tccfg_file_path) as temp_f:
+                temp_atleastonedifferent = False
+                temp_all_lines = temp_f.read().split('\n')
+                temp_filecontents_list = []
+                for temp_line in temp_all_lines:
+                    temp_line += '\n'
+                    if len(temp_line.split('=')) < 2 or temp_line.startswith('='):
+                        temp_filecontents_list.append(temp_line)
+                        continue
+                    if temp_line.startswith('#'):
+                        temp_line_active = False
+                        temp_optname = temp_line[1:].split('=')[0].strip()
+                    else:
+                        temp_line_active = True
+                        temp_optname = temp_line.split('=')[0].strip()
+                    temp_optvalue = temp_line.split('=')[1].strip()
+                    if temp_optname in tccfg_from_bfile_dict:
+                        dbglog(str(temp_line_active) + ',' + str(tccfg_from_bfile_dict[temp_optname]))
+                        if temp_line_active != tccfg_from_bfile_dict[temp_optname][0] or temp_optvalue != tccfg_from_bfile_dict[temp_optname][1]:
+                            temp_atleastonedifferent = True
+                        temp_line = '#' if not tccfg_option_dict[temp_optname][0] else ''
+                        temp_line += temp_optname + ' = '
+                        temp_line += tccfg_option_dict[temp_optname][1]
+                        temp_line += '\n'
+                        tccfg_from_file_dict[temp_optname] = (temp_line_active, temp_optvalue)
+                    if temp_line not in temp_filecontents_list:
+                        temp_filecontents_list.append(temp_line)
+                temp_filecontents = ''.join(temp_filecontents_list)
+                if temp_filecontents.endswith('\n'):
+                    temp_filecontents = temp_filecontents[:-1]
+                del temp_filecontents_list
+                del temp_all_lines
+                if len(tccfg_from_file_dict) == len(tccfg_from_bfile_dict) and not temp_atleastonedifferent:
+                    tccfg_overwrite_existing = True
+            del temp_atleastonedifferent
+            del temp_line
+            del temp_line_active
+            del temp_optname
+            del temp_optvalue
+    if not tccfg_overwrite_existing:
+        temp_overwritevalue = xbmcgui.Dialog().yesnocustom(addonname, 'The texturecache.cfg does not match what the add-on expected to see. Click "Add-on" to continue with the add-on settings (which will be saved to the file), "File" to continue with the file settings (which will be saved to the add-on) or "Abort" to cancel the add-on run.', 'Abort', 'File', 'Add-on')
+        if temp_overwritevalue == 0:
+            tccfg_overwrite_existing = False
+        elif temp_overwritevalue == 1:
+            tccfg_overwrite_existing = True
+        else:
+            dbglog('Aborting add-on run')
+            exit_on_error()
+        del temp_overwritevalue
+    if tccfg_overwrite_existing:
+        xbmcvfs.delete(tccfg_file_path)
+        with xbmcvfs.File(tccfg_file_path, 'w') as temp_f:
+            if temp_filecontents != '':
+                temp_f.write(temp_filecontents)
+            else:
+                for temp_optname in tccfg_option_dict:
+                    temp_line = '#' if not tccfg_option_dict[temp_optname][0] else ''
+                    temp_line += temp_optname + ' = '
+                    temp_line += tccfg_option_dict[temp_optname][1]
+                    temp_line += '\n'
+                    temp_f.write(temp_line)
+                del temp_optname
+                del temp_line
+    else:
+        for temp_optname in tccfg_option_dict:
+            if temp_optname not in tccfg_from_file_dict:
+                addon.setSettingBool('tc_opt_' + temp_optname + '_bool', False)
+            else:
+                addon.setSettingBool('tc_opt_' + temp_optname + '_bool', tccfg_from_file_dict[temp_optname][0])
+                addon.setSetting('tc_opt_' + temp_optname + '_value', tccfg_from_file_dict[temp_optname][1])
+        del temp_optname
+    xbmcvfs.copy(tccfg_file_path, tccfg_bfile_path)
+    del temp_filecontents
+    del tccfg_option_dict
+    del tccfg_from_file_dict
+    del tccfg_from_bfile_dict
+
+
 xbmcgui.Dialog().notification(addonname, 'Scanning library...',
                               xbmcgui.NOTIFICATION_INFO, 2000)
 xbmc.sleep(2000)

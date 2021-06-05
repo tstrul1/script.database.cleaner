@@ -2,6 +2,15 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
+# Notice: this script file has been modified from its original form in
+# order to be called from within the script.database.cleaner Kodi
+# add-on.
+# The original (unmodified) file can be obtained from: 
+# https://github.com/MilhouseVH/texturecache.py
+# The copyright notice below was kept unmodified.
+################################################################################
+
+################################################################################
 #
 #  Copyright (C) 2013-present Neil MacLeod (texturecache@nmacleod.com)
 #
@@ -51,6 +60,8 @@ if sys.version_info >= (3, 0):
   basestring = (str, bytes)
 else:
   import ConfigParser, StringIO, httplib, urllib2, Queue
+
+called_from_addon = False
 
 lock = threading.RLock()
 
@@ -918,7 +929,16 @@ class MyLogger():
       self.ISATTY = False
 
     #Ensure stdout/stderr use utf-8 encoding...
-    if MyUtility.isPython3_1:
+    class StdOutStub(object):
+        def write(self, msg):
+            if dbglog:
+                dbglog(msg)
+        def flush(self):
+            pass
+    if called_from_addon:
+        sys.stdout = StdOutStub()
+        sys.stderr = sys.stdout
+    elif MyUtility.isPython3_1:
       sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
       sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     else:
@@ -7555,8 +7575,11 @@ def readFile(infile, outfile):
     try:
       PAYLOAD = jcomms.sendWeb("GET", url, "readFile", rawData=True)
       if outfile == "-":
-        os.write(sys.stdout.fileno(), PAYLOAD)
-        sys.stdout.flush()
+        if called_from_addon:
+          sys.stdout.write(PAYLOAD)
+        else:
+          os.write(sys.stdout.fileno(), PAYLOAD)
+          sys.stdout.flush()
       else:
         f = open(outfile, "wb")
         f.write(PAYLOAD)
