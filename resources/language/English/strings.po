@@ -133,7 +133,7 @@ msgid "Delete sets with fewer than two movies"
 msgstr ""
 
 msgctxt "#32031"
-msgid "\"texturecache.py\" config"
+msgid "Texturecache"
 msgstr "" 
 
 msgctxt "#32032"
@@ -181,11 +181,11 @@ msgid "duplicates: Lists duplicate movies"
 msgstr "" 
 
 msgctxt "#32043"
-msgid "Enable \"texturecache.py\" runs"
+msgid "Enable Texturecache runs"
 msgstr ""
 
 msgctxt "#32044"
-msgid "Pipe \"texturecache.py\" output to the database.cleaner logfile"
+msgid "Pipe Texturecache output to database.cleaner logfile"
 msgstr ""
 
 msgctxt "#32045"
@@ -209,7 +209,7 @@ msgid "(click here to change directory to clean)"
 msgstr ""
 
 msgctxt "#33000"
-msgid "\"texturecache.cfg\" options"
+msgid "Texturecache CFG"
 msgstr ""
 
 msgctxt "#33001"
