@@ -467,7 +467,7 @@ def cleaner_log_file(our_select, my_command_list, cleaning):
 '''
     logfile.write(logfile_header)
 
-    if deepclean and not replacepath and not specificpath and not is_mysql and not no_sources and not remote_file:
+    if deepclean and not replacepath and not specificpath and not no_sources:
         global global_prepared_list
         global global_source_list
         if global_prepared_list is None:
@@ -495,9 +495,11 @@ def cleaner_log_file(our_select, my_command_list, cleaning):
             if excluding:
                 temp_params.extend([e + '%' for e in excludes_list])
                 temp_like_str += ' AND (strPath NOT LIKE '
-                temp_like_str += ' AND strPath NOT LIKE '.join('?'*len(excludes_list))
+                temp_like_str += ' AND strPath NOT LIKE '.join(replstr*len(excludes_list))
                 temp_like_str += ')'
-            temp_sql = "SELECT strPath, idPath as id FROM path WHERE (strPath LIKE " + temp_like_str + " UNION SELECT (path.strPath || files.strFilename) as strPath, idFile as id FROM files INNER JOIN path ON files.idPath = path.idPath WHERE (strPath LIKE " + temp_like_str + " ORDER BY strPath"
+            concat_string = "(path.strPath || files.strFilename)" if not is_mysql else "CONCAT(path.strPath, files.strFilename)"
+            temp_sql = "SELECT strPath, idPath as id FROM path WHERE (strPath LIKE " + temp_like_str + " UNION SELECT " + concat_string + " as strPath, idFile as id FROM files INNER JOIN path ON files.idPath = path.idPath WHERE (strPath LIKE " + temp_like_str + " ORDER BY strPath"
+            del concat_string
             if temp_atleastonesource:
                 temp_sql_count = "SELECT count(*) FROM (%s)" % (temp_sql)
                 wrapped_execute(cursor, temp_sql_count, temp_params*2)
@@ -734,7 +736,6 @@ if runtexturecache:
                         temp_optname = temp_line.split('=')[0].strip()
                     temp_optvalue = temp_line.split('=')[1].strip()
                     if temp_optname in tccfg_from_bfile_dict:
-                        dbglog(str(temp_line_active) + ',' + str(tccfg_from_bfile_dict[temp_optname]))
                         if temp_line_active != tccfg_from_bfile_dict[temp_optname][0] or temp_optvalue != tccfg_from_bfile_dict[temp_optname][1]:
                             temp_atleastonedifferent = True
                         temp_line = '#' if not tccfg_option_dict[temp_optname][0] else ''
@@ -1343,6 +1344,8 @@ if i:
                 base_sql = "DELETE FROM %s WHERE NOT EXISTS (SELECT 1 FROM %s WHERE %s.%s = %s.%s)"
                 for table, source, field in (('tvshowlinkpath', 'path', 'idPath'), ('tvshow', 'tvshowlinkpath', 'idShow'), ('actor', 'actor_link', 'actor_id'), ('studio', 'studio_link', 'studio_id')):
                     sql = base_sql % (table, source, table, field, source, field)
+                    if table == 'actor':
+                        sql += " AND NOT EXISTS (SELECT 1 FROM director_link WHERE actor.actor_id = director_link.actor_id)  AND NOT EXISTS (SELECT 1 FROM writer_link WHERE actor.actor_id = writer_link.actor_id)"
                     temp_ran_sql_statements = temp_ran_sql_statements + 1
                     unwrapped_execute(cursor, sql, progress=int(100*temp_ran_sql_statements/temp_total_sql_statements))
                 base_sql = "DELETE FROM sets WHERE NOT EXISTS (SELECT 1 FROM movie WHERE movie.idSet = sets.idSet GROUP BY idSet HAVING count(idSet) > %s)"

@@ -2,15 +2,6 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-# Notice: this script file has been modified from its original form in
-# order to be called from within the script.database.cleaner Kodi
-# add-on.
-# The original (unmodified) file can be obtained from: 
-# https://github.com/MilhouseVH/texturecache.py
-# The copyright notice below was kept unmodified.
-################################################################################
-
-################################################################################
 #
 #  Copyright (C) 2013-present Neil MacLeod (texturecache@nmacleod.com)
 #
@@ -61,8 +52,6 @@ if sys.version_info >= (3, 0):
 else:
   import ConfigParser, StringIO, httplib, urllib2, Queue
 
-called_from_addon = False
-
 lock = threading.RLock()
 
 #
@@ -71,7 +60,7 @@ lock = threading.RLock()
 class MyConfiguration(object):
   def __init__(self, argv):
 
-    self.VERSION = "2.5.4"
+    self.VERSION = "2.5.3"
 
     self.GITHUB = "https://raw.github.com/MilhouseVH/texturecache.py/master"
     self.ANALYTICS_GOOD = "http://goo.gl/BjH6Lj"
@@ -923,22 +912,10 @@ class MyLogger():
     self.DEBUG = False
     self.VERBOSE = False
 
-    try:
-      self.ISATTY = sys.stdout.isatty()
-    except:
-      self.ISATTY = False
+    self.ISATTY = sys.stdout.isatty()
 
     #Ensure stdout/stderr use utf-8 encoding...
-    class StdOutStub(object):
-        def write(self, msg):
-            if dbglog:
-                dbglog(msg)
-        def flush(self):
-            pass
-    if called_from_addon:
-        sys.stdout = StdOutStub()
-        sys.stderr = sys.stdout
-    elif MyUtility.isPython3_1:
+    if MyUtility.isPython3_1:
       sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
       sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
     else:
@@ -7575,11 +7552,8 @@ def readFile(infile, outfile):
     try:
       PAYLOAD = jcomms.sendWeb("GET", url, "readFile", rawData=True)
       if outfile == "-":
-        if called_from_addon:
-          sys.stdout.write(PAYLOAD)
-        else:
-          os.write(sys.stdout.fileno(), PAYLOAD)
-          sys.stdout.flush()
+        os.write(sys.stdout.fileno(), PAYLOAD)
+        sys.stdout.flush()
       else:
         f = open(outfile, "wb")
         f.write(PAYLOAD)
